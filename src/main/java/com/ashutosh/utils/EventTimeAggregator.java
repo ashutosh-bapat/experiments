@@ -31,6 +31,7 @@ public class EventTimeAggregator
 	private float totalAvgCorrection;
 	private final int prdInitNumEvents = 10;
 	private final int totalInitNumEvents = 10;
+	private Float lastPeriodicAverage = null;
 
 	public EventTimeAggregator(String eventNameIn, long periodIn)
 	{
@@ -89,14 +90,15 @@ public class EventTimeAggregator
 		// correction for one stopwatch to the other.
 		totalStopWatch.suspend();
 		prdStopWatch.suspend();
-		prdNumEvents++;
 		totalNumEvents++;
+		prdNumEvents++;
 
 		if (prdNumEvents % period == 0)
 		{
-			prdStopWatch.reset();
+			lastPeriodicAverage = calcPeriodicAverage();
 
-			// We need the stopwatch to be in suspended state again, so 
+			prdStopWatch.reset();
+			// We need the stopwatch to be in suspended state again, so
 			prdAvgCorrection = calcAvgCorrection(prdStopWatch, prdInitNumEvents);
 			prdNumEvents = 0;
 		}
@@ -111,8 +113,21 @@ public class EventTimeAggregator
 		return ((float) getTotalTime())/ totalNumEvents;
 	}
 
-	public float getPeriodicAverage()
-	{
+	/**
+	 * @return the average time used per event in the last period.
+	 * @throws IllegalStateException, if the first period has not finished.
+	 */
+	public float getPeriodicAverage() throws IllegalStateException {
+		// lastPeriodicAverage can be null, if the first period is yet to finish
+        try {
+			return lastPeriodicAverage.floatValue();
+		} catch (NullPointerException npe) {
+        	throw new IllegalStateException("Request for periodic average not allowed before completing the first period." +
+					"Total " + totalNumEvents + " completed with " + prdNumEvents + " completed in the first period.");
+		}
+	}
+
+	private float calcPeriodicAverage() {
 		float prdTotalTime = prdStopWatch.getTime();
 
 		// Adjust the corrections for initial timing measurement as well as
@@ -123,6 +138,6 @@ public class EventTimeAggregator
 		// all events.
 		prdTotalTime = prdTotalTime - totalAvgCorrection * prdNumEvents;
 
-		return prdTotalTime / prdNumEvents;
+		return new Float(prdTotalTime / prdNumEvents);
 	}
 }
