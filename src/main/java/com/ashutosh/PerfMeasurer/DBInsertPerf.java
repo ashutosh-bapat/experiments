@@ -16,6 +16,7 @@ import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import java.lang.Thread;
 import org.apache.commons.math3.util.ArithmeticUtils;
+import org.apache.commons.math3.exception.MathArithmeticException;
 import java.util.ArrayList;
 import java.util.List;
 import java.lang.Math;
@@ -137,6 +138,8 @@ public class DBInsertPerf implements Runnable {
         // Setup connection with auto commit off
         Connection conn = DriverManager.getConnection(DBUrl, User, Password);
         conn.setAutoCommit(false);
+        Statement chkptStmt = conn.createStatement();
+        chkptStmt.executeUpdate("CHECKPOINT");
 
         createTablesAndIndexes(conn, withIndex, useSerial);
         testVarcharInsertsWithLength(len, numRows, numThreads, withIndex, useSerial);
@@ -181,6 +184,7 @@ public class DBInsertPerf implements Runnable {
         // Perf tests without indexes and without serial column
         runPerfTest(numRows, false, false);
 
+        System.out.println(PerfRecord.outHeader());
         System.out.println(Joiner.on("\n").join(perfRecords));
     }
 
@@ -254,6 +258,9 @@ public class DBInsertPerf implements Runnable {
             this.maxAvgTimeInMSPerRow = maxAvgTimeInMSPerRow;
         }
 
+        public static String outHeader() {
+            return "numthreads, numrows, length, withindex, useserial, totaltime, avgtimeperrow, mintimeperrow, maxtimeperrow";
+        }
         public String toCsvString() {
             return numThreads + ", " + numRows + ", " + len + ", " +
                     BooleanUtils.toStringTrueFalse(withIndex) + ", " +
