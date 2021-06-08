@@ -26,27 +26,34 @@ public class Cell {
         this.id = id;
     }
 
-    void resolve() {
+    // Returns true if the cell had a valid candidate and resolves it. If the cell was already resolved, it will return
+    // false.
+    boolean resolve() {
         // Already resolved, ignore
         if (finalValue != null) {
-            return;
+            return false;
         }
         if (possibleValues.size() != 1) {
-            throw new IllegalStateException("cell (" + id + ") has more than one possible values: " + possibleValues());
+            throw new IllegalStateException("cell (" + id + ") has more than one possible values: " + possibleValuesStr());
         }
 
         // There should be only one element
         finalValue = possibleValues.iterator().next();
         clubs.forEach(club -> club.resolved(this));
+        return true;
     }
 
-    String possibleValues() {
+    String possibleValuesStr() {
         return possibleValues.stream().map(value -> value.str).collect(Collectors.joining(","));
+    }
+
+    EnumSet<Symbol> getPossibleValues() {
+        return possibleValues.clone();
     }
 
     Symbol getFinalValue() {
         if (finalValue == null) {
-           throw new IllegalStateException("cell (" + id + ") does not have a final value yet. Its possible values are: " + possibleValues());
+           throw new IllegalStateException("cell (" + id + ") does not have a final value yet. Its possible values are: " + possibleValuesStr());
         }
         return finalValue;
     }
@@ -62,5 +69,25 @@ public class Cell {
         if (possibleValues.size() == 1) {
             candidates.add(this);
         }
+
+        clubs.forEach(club -> club.removeCellForSymbol(this, symbol));
+    }
+
+    String getId() {
+        return id;
+    }
+
+    boolean isResolved() {
+        return finalValue != null;
+    }
+
+    // Function used by other classes to set a symbol that is deduced to occupy this cell. For example, if a row sees
+    // that a particular cell is the only one to contain a given symbol, it would invoke this method.
+    void setSymbol(Symbol symbol) {
+       if (!possibleValues.contains(symbol))  {
+           throw new IllegalArgumentException("cell (" + id + ") does not have " + symbol + " in the possible values.");
+       }
+
+       possibleValues.removeAll(EnumSet.complementOf(EnumSet.of(symbol)));
     }
 }

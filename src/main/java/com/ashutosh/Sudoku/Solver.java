@@ -23,9 +23,9 @@ public class Solver {
         int size_sqrt = (int) Math.sqrt(size);
 
         for (int i = 0; i < size; i++) {
-            rows[i] = new Club("row " + i);
-            cols[i] = new Club("column " + i);
-            squares[i] = new Club("square " + i);
+            rows[i] = new Club("row " + i, candidates);
+            cols[i] = new Club("column " + i, candidates);
+            squares[i] = new Club("square " + i, candidates);
         }
 
         for (int row = 0; row < size; row++) {
@@ -55,10 +55,17 @@ public class Solver {
 
     String[][] solve() {
         String[][] outputMatrix;
+        int resolvedCells = 0;
 
         while(!candidates.isEmpty()) {
             Cell cell = candidates.remove();
-            cell.resolve();
+            if (cell.resolve()) {
+                resolvedCells = resolvedCells + 1;
+            }
+        }
+
+        if (resolvedCells != size * size) {
+            System.out.println("Resolved only " + resolvedCells + " and not all " + size * size);
         }
 
         outputMatrix = new String[size][size];
@@ -67,10 +74,11 @@ public class Solver {
                 try {
                     outputMatrix[row][col] = cells[row][col].getFinalValue().str;
                 } catch (IllegalStateException ise) {
-                    outputMatrix[row][col] = cells[row][col].possibleValues();
+                    outputMatrix[row][col] = cells[row][col].possibleValuesStr();
                 }
             }
         }
         return outputMatrix;
     }
+
 }
