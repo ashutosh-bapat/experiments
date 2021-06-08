@@ -59,7 +59,10 @@ public class Cell {
     }
 
     void remove(Symbol symbol) {
-        possibleValues.remove(symbol);
+        // If the symbol was not present or already removed, nothing to do.
+        if (!possibleValues.remove(symbol))
+            return;
+
         if (possibleValues.size() == 0) {
             if (finalValue == null) {
                 throw new IllegalStateException("cell (" + id + ") does not have any possible value after removing: " + symbol);
@@ -88,6 +91,15 @@ public class Cell {
            throw new IllegalArgumentException("cell (" + id + ") does not have " + symbol + " in the possible values.");
        }
 
-       possibleValues.removeAll(EnumSet.complementOf(EnumSet.of(symbol)));
+       // Remove all the other symbols from possible values
+       for (Symbol otherSymbol : possibleValues) {
+           if (otherSymbol != symbol) {
+               remove(otherSymbol);
+           }
+       }
+    }
+
+    public List<Club> getClubs() {
+        return clubs;
     }
 }

@@ -28,9 +28,9 @@ public class Solver {
         int size_sqrt = (int) Math.sqrt(size);
 
         for (int i = 0; i < size; i++) {
-            rows[i] = new Club("row " + i, candidates);
-            cols[i] = new Club("column " + i, candidates);
-            squares[i] = new Club("square " + i, candidates);
+            rows[i] = new Club("row " + i, candidates, size);
+            cols[i] = new Club("column " + i, candidates, size);
+            squares[i] = new Club("square " + i, candidates, size);
         }
 
         for (int row = 0; row < size; row++) {
