@@ -1,8 +1,12 @@
 package com.ashutosh.Sudoku;
 
+import org.apache.commons.lang3.time.StopWatch;
+
 import java.util.List;
 import java.util.Queue;
+import java.util.Timer;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 public class Solver {
     private final int size;
@@ -11,6 +15,7 @@ public class Solver {
     private final Club[] cols;
     private final Club[] squares;
     private final Queue<Cell> candidates;
+    StopWatch stopWatch = new StopWatch();
 
     Solver(String[][] matrix) {
         // This should be a square matrix
@@ -54,6 +59,7 @@ public class Solver {
     }
 
     String[][] solve() {
+        stopWatch.start();
         String[][] outputMatrix;
         int resolvedCells = 0;
 
@@ -78,7 +84,11 @@ public class Solver {
                 }
             }
         }
+        stopWatch.stop();
         return outputMatrix;
     }
 
+    long timeTakenToSolve() {
+        return stopWatch.getTime(TimeUnit.MILLISECONDS);
+    }
 }

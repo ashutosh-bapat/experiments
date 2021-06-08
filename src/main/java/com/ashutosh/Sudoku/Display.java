@@ -44,6 +44,6 @@ public class Display {
             }
         }
 
-        JOptionPane.showConfirmDialog(null, panel, "Solution matrix ", JOptionPane.OK_CANCEL_OPTION);
+        JOptionPane.showConfirmDialog(null, panel, "Solution matrix (solved in " + solver.timeTakenToSolve() + "ms)", JOptionPane.OK_CANCEL_OPTION);
     }
 }
