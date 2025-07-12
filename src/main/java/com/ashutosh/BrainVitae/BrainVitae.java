@@ -29,7 +29,8 @@ class BrainVitae
 		int	numThreads = Integer.parseInt(args[0]);
 		BoardSolverDB bvBoardSolverDb = new BoardSolverDB(dbUrl, dbUser, dbPassword, statesTableName, movesTableName,
 															dbSchema);
-		BVBoardState initialState =  new BVBoardState(7);
+		final BrainVitaeBoard board = new BrainVitaeBoard(7);
+		BVBoardState initialState =  new BVBoardState(board);
 		bvBoardSolverDb.createObjects();
 		BoardSolver bvBoardSolver = new BoardSolver(numThreads, initialState, bvBoardSolverDb);
 		bvBoardSolver.solve();

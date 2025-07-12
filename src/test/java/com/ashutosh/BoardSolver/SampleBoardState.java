@@ -1,10 +1,7 @@
 package com.ashutosh.BoardSolver;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 public class SampleBoardState implements BoardState {
 
@@ -51,8 +48,7 @@ public class SampleBoardState implements BoardState {
         return id;
     }
 
-    @Override
-    public void setId(long id) {
+    private void setId(long id) {
         this.id = id;
     }
 

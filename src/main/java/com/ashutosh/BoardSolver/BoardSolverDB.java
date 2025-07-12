@@ -208,14 +208,9 @@ public class BoardSolverDB {
                             //    a state is never deleted. Any exception here will be caught by the outermost try block.
                             searchStateStmt.setString(1, boardStateDesc);
                             try (ResultSet rsSSS2 = searchStateStmt.executeQuery()) {
-                                state.setId((rsISS.getLong(1)));
                             }
-                        } else {
-                            state.setId((rsISS.getLong(1)));
                         }
                     }
-                } else {
-                    state.setId((rsSSS.getLong(1)));
                 }
             } catch (SQLException sqe) {
                commitTran = false;

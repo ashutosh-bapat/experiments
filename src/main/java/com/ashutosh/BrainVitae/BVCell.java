@@ -25,4 +25,14 @@ public class BVCell {
     public String toString() {
         return "(" + row + ", " + col + ")";
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof BVCell) {
+            BVCell other = (BVCell) obj;
+            return row == other.row && col == other.col;
+        } else {
+            return false;
+        }
+    }
 }

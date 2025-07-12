@@ -21,11 +21,6 @@ public interface BoardState {
     long getId();
 
     /**
-     * @param id, set id of the current state to the given id.
-     */
-    void setId(long id);
-
-    /**
      * @return string description of the state.
      */
     String getDesc();

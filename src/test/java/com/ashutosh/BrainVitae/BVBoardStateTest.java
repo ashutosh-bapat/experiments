@@ -14,6 +14,7 @@ public class BVBoardStateTest {
     private static final Random random = new Random();
     private static final Logger LOGGER = Logger.getLogger(BVBoardStateTest.class.getName());
     private static final double fracMovesToTest = 0.2;
+    private static final BrainVitaeBoard board = new BrainVitaeBoard(7);
 
     @Before
     public void setUp() throws Exception {
@@ -24,21 +25,17 @@ public class BVBoardStateTest {
     }
 
     private void testBVBoardState(BVBoardState state) {
-        int size = state.getBoardSize();
+        int size = state.board.getBoardSize();
         // A strip of vertical and horizontal three cells around median can be filled or empty. Rest are unused.
-        int numCellsInVertMiddleStrip = BVBoardState.FILLED_STRIP_WIDTH * size;
-        int numCellsInHoriMiddleStrip = BVBoardState.FILLED_STRIP_WIDTH * size;
-        int numVertHorCommonCells = BVBoardState.FILLED_STRIP_WIDTH * BVBoardState.FILLED_STRIP_WIDTH;
+        int numCellsInVertMiddleStrip = board.FILLED_STRIP_WIDTH * size;
+        int numCellsInHoriMiddleStrip = board.FILLED_STRIP_WIDTH * size;
+        int numVertHorCommonCells = board.FILLED_STRIP_WIDTH * state.board.FILLED_STRIP_WIDTH;
         int numTotalCells = numCellsInVertMiddleStrip + numCellsInHoriMiddleStrip - numVertHorCommonCells;
         Assert.assertEquals(numTotalCells, state.getNumFilled() + state.getNumEmpty());
 
-        long id = random.nextLong();
-        // get and set id agree
-        state.setId(id);
-        Assert.assertEquals(id, state.getId());
 
         // state descriptor when fed back results in the same state
-        Assert.assertEquals(state, new BVBoardState(state.getId(), state.getDesc()));
+        Assert.assertEquals(state, new BVBoardState(state.board, state.getId()));
 
         // test copy constructor
         Assert.assertEquals(state, new BVBoardState(state));
@@ -46,27 +43,27 @@ public class BVBoardStateTest {
 
     @Test
     public void testClassConstants() {
+
         // For now only boards with 3 cell wide strips filled are supported.
-        Assert.assertEquals(3, BVBoardState.FILLED_STRIP_WIDTH);
+        Assert.assertEquals(3, board.FILLED_STRIP_WIDTH);
 
         // The width of the strip should always be odd since we support odd sizes only.
-        Assert.assertEquals(1, BVBoardState.FILLED_STRIP_WIDTH % 2);
+        Assert.assertEquals(1, board.FILLED_STRIP_WIDTH % 2);
     }
 
     @Test
     public void testInitialState() {
         for (int size = 7; size <= 9; size = size + 2) {
-            int midpoint = size / 2;
-            BVBoardState state = new BVBoardState(size);
+            BrainVitaeBoard board = new BrainVitaeBoard(size);
+            BVBoardState state = new BVBoardState(board);
             // An initial state has middle cell empty.
             Assert.assertEquals(1, state.getNumEmpty());
             for (int row = 0; row < size; row++) {
                 for (int col = 0; col < size; col++) {
                     BVCell cell = new BVCell(row, col);
-                    if (row == midpoint && col == midpoint) {
+                    if (cell.equals(board.midcell)) {
                         Assert.assertTrue(state.isEmptyCell(cell));
-                    } else if (BVBoardState.withinFilledStrip(row, midpoint) ||
-                                BVBoardState.withinFilledStrip(col, midpoint)) {
+                    } else if (board.withinFilledStrip(cell)) {
                         Assert.assertTrue(state.isFilledCell(cell));
                     } else {
                         Assert.assertFalse(state.isFilledCell(cell));
@@ -78,23 +75,12 @@ public class BVBoardStateTest {
         }
     }
 
-    @Test (expected = IllegalArgumentException.class)
-    public void testInvalidBoardSizes() {
-        // Any even sized board is invalid
-        BVBoardState state = new BVBoardState(random.nextInt() * 2);
-
-        // Any odd value less than filled width size should is invalid
-        for (int i = 1; i <= BVBoardState.FILLED_STRIP_WIDTH; i = i + 2) {
-            state = new BVBoardState(i);
-        }
-    }
-
     // Test board states with some random-ness checking the properties of a random board state.
     // We do this by starting with the initial state and applying one of the possible moves randomly and repeating this
     // on the resulting state till there are no possible moves. This is fine since BrainVitae state graphs are DAGs.
     @Test
     public void testRandomState() {
-        testApplyMove(new BVBoardState(7));
+        testApplyMove(new BVBoardState(board));
     }
 
     private void testApplyMove(BVBoardState state) {

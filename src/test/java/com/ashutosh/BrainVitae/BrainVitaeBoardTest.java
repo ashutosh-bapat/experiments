@@ -52,5 +52,6 @@ public class BrainVitaeBoardTest extends TestCase {
         }
 
         Assert.assertEquals(BOARD_SIZE * BOARD_SIZE - 16, expIndex);
+        Assert.assertEquals(expIndex, board.numUsedCells);
     }
 }

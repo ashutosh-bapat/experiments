@@ -3,6 +3,9 @@ package com.ashutosh.BrainVitae;
 public class BrainVitaeBoard {
     private final int cellToBitIndexMap[][];
     static final int FILLED_STRIP_WIDTH=3;
+    public final BVCell midcell;
+
+    final int numUsedCells;
 
     static final int MAX_CELLS = 64;
     static final int UNUSED_CELL_INDEX = -1;
@@ -13,9 +16,11 @@ public class BrainVitaeBoard {
 
     private final int boardSize;
 
-    static boolean withinFilledStrip(int point, int midpoint) {
+    public boolean withinFilledStrip(BVCell cell) {
         int filledWidthAroundMidpoint = FILLED_STRIP_WIDTH / 2;
-        if (point <= midpoint + filledWidthAroundMidpoint && point >= midpoint - filledWidthAroundMidpoint) {
+        if (cell.getRow() <= midcell.getRow() + filledWidthAroundMidpoint && cell.getRow() >= midcell.getRow() - filledWidthAroundMidpoint) {
+            return true;
+        } else if (cell.getCol() <= midcell.getCol() + filledWidthAroundMidpoint && cell.getCol() >= midcell.getCol() - filledWidthAroundMidpoint) {
             return true;
         }
         return false;
@@ -35,17 +40,19 @@ public class BrainVitaeBoard {
         cellToBitIndexMap = new int[size][size];
 
         final int midpoint = size / 2;
+        midcell = new BVCell(midpoint, midpoint);
         int index = 0;
         for (int row = 0; row < size; row++) {
             for (int col = 0; col < size; col++) {
                 BVCell cell = new BVCell(row, col);
-                if (withinFilledStrip(row, midpoint) || withinFilledStrip(col, midpoint)) {
+                if (withinFilledStrip(cell)) {
                     setIndex(cell, index++);
                 } else {
                     setIndex(cell, UNUSED_CELL_INDEX);
                 }
             }
         }
+        numUsedCells = index;
     }
 
     private boolean isValidCell(BVCell cell) {

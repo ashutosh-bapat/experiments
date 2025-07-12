@@ -3,10 +3,10 @@ package com.ashutosh.BrainVitae;
 import com.ashutosh.BoardSolver.BoardMove;
 import com.ashutosh.BoardSolver.BoardState;
 
+import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.regex.Pattern;
 
 /**
  * State of BrainVitae board.
@@ -28,22 +28,14 @@ import java.util.regex.Pattern;
 // X X 0 0 0 X X
 //
 public class BVBoardState implements BoardState {
-    private enum CellState {UNUSED, FILLED, EMPTY};
-    static private BVDirection BVDIRECTIONS[]; // shared by all instances
+    private enum CellState {FILLED, EMPTY}
 
-    static final int FILLED_STRIP_WIDTH=3;
+    final BrainVitaeBoard board;
+    static private final BVDirection[] BVDIRECTIONS; // shared by all instances
 
-    private CellState boardState[][] = null;
+    private CellState[][] boardState = null;
 
-    int getBoardSize() {
-        return boardSize;
-    }
-
-    private int boardSize = 0;
-    // Even for a 9 * 9 sized board the number possible of states fits an 8 byte
-    // long integer, even though the actual number of states may not fit an 8
-    // byte long integer
-    private long id = 0;
+    private Long id = null;
 
     int getNumEmpty() {
         return numEmpty;
@@ -60,7 +52,7 @@ public class BVBoardState implements BoardState {
     // Initialize BVDIRECTIONS
     static
     {
-        BVDirLabel dirlabels[] = BVDirLabel.values();
+        BVDirLabel[] dirlabels = BVDirLabel.values();
         int			cnt;
 
         BVDIRECTIONS = new BVDirection[dirlabels.length];
@@ -75,48 +67,47 @@ public class BVBoardState implements BoardState {
         assert cnt == BVDIRECTIONS.length : "expected " + BVDIRECTIONS.length + " BVDIRECTIONS but found " + cnt;
     }
 
-    BVBoardState(int size) throws IllegalArgumentException {
-        if (size % 2 != 1) {
-            throw new IllegalArgumentException("invalid board size " + size + ". Size should be an odd integer.");
-        }
+    /**
+     * Gives initial state of a board for a given board.
+     *
+     * The initial state is all the holes filled except the middle one.
+     *
+     * @param board underlying board on which the initial state is to be constructed
+     */
+    BVBoardState(BrainVitaeBoard board) {
+        this.board = board;
 
-        if (size < FILLED_STRIP_WIDTH) {
-            throw new IllegalArgumentException("invalid board size " + size + ". Size should be at least " + FILLED_STRIP_WIDTH + ".");
-        }
+        boardState = new CellState[board.getBoardSize()][board.getBoardSize()];
 
-        boardSize = size;
-        boardState = new CellState[size][size];
-        id = 0;
-
-        int midpoint = size / 2;
-        for (int row = 0; row < size; row++) {
-            for (int col = 0; col < size; col++) {
+        int midpoint = board.getBoardSize() / 2;
+        for (int row = 0; row < board.getBoardSize(); row++) {
+            for (int col = 0; col < board.getBoardSize(); col++) {
                 BVCell cell = new BVCell(row, col);
+
+                if (!board.isUsed(cell))
+                    continue;
+
                 if (row == midpoint && col == midpoint) {
                     emptyCell(cell, false);
-                } else if (withinFilledStrip(row, midpoint) || withinFilledStrip(col, midpoint)) {
-                    fillCell(cell, false);
                 } else {
-                    markCellUnused(cell);
+                    fillCell(cell, false);
                 }
             }
         }
     }
 
-    static boolean withinFilledStrip(int point, int midpoint) {
-        int filledWidthAroundMidpoint = FILLED_STRIP_WIDTH / 2;
-        if (point <= midpoint + filledWidthAroundMidpoint && point >= midpoint - filledWidthAroundMidpoint) {
-            return true;
-        }
-        return false;
-    }
-
-    BVBoardState(BVBoardState other) {
-        boardSize = other.boardSize;
-        boardState = new CellState[boardSize][boardSize];
-        id = other.id;
-        for (int row = 0; row < boardSize; row++) {
-            for (int col = 0; col < boardSize; col++) {
+    /**
+     * Copies the given state of board into another instance.
+     *
+     * The constructor is usually used to apply a move to a given board state.
+     * @param other board state to be copied
+     */
+    BVBoardState(@org.jetbrains.annotations.NotNull BVBoardState other) {
+        this.board = other.board;
+        this.id = null; // to be calculated later if required
+        boardState = new CellState[board.getBoardSize()][board.getBoardSize()];
+        for (int row = 0; row < board.getBoardSize(); row++) {
+            for (int col = 0; col < board.getBoardSize(); col++) {
                 BVCell cell = new BVCell(row, col);
                 switch (other.getCellState(cell)) {
                     case EMPTY:
@@ -125,56 +116,71 @@ public class BVBoardState implements BoardState {
                     case FILLED:
                         fillCell(cell, false);
                         break;
-                    case UNUSED:
-                        markCellUnused(cell);
-                        break;
                     default:
                         throw new IllegalStateException("Illegal state " + other.getCellState(cell) + " found.");
                 }
             }
         }
+
+        assert (this.numEmpty == other.numEmpty && this.numFilled == other.numFilled);
     }
 
-    BVBoardState(long id, String stateDesc)
+    /**
+     * Construct board state for the given Id.
+     *
+     * This is inverse of getId() i.e. BVBoardState(board, otherBoardState.getId()) == otherBoardState.
+     * @param board
+     * @param id
+     */
+    BVBoardState(BrainVitaeBoard board, long id)
     {
-        String		strarr[];
-        int			crow;
-        int			ccol;
-
         this.id = id;
-        strarr = stateDesc.substring(2, stateDesc.length() - 2).split(Pattern.quote("], ["));
-        boardSize = strarr.length;
-        boardState = new CellState[boardSize][boardSize];
-        for (crow = 0; crow < boardSize; crow++)
+        this.board = board;
+        BigInteger idBitSet = BigInteger.valueOf(id);
+        boardState = new CellState[board.getBoardSize()][board.getBoardSize()];
+        for (int crow = 0; crow < board.getBoardSize(); crow++)
         {
-            String		cellstates[];
-
-            cellstates = strarr[crow].split(", ");
-            if (cellstates.length != boardSize) {
-                throw new IllegalArgumentException("wrong number of tokens while parsing state string, expected " + boardSize + " but got " + cellstates.length);
-            }
-            for (ccol = 0; ccol < boardSize; ccol++)
+            for (int ccol = 0; ccol < board.getBoardSize(); ccol++)
             {
-                switch (CellState.valueOf(cellstates[ccol]))
+                BVCell cell = new BVCell(crow, ccol);
+                if (idBitSet.testBit(board.getIndex(cell)))
                 {
-                    case EMPTY:
-                        emptyCell(new BVCell(crow, ccol), false);
-                        break;
-
-                    case FILLED:
-                        fillCell(new BVCell(crow, ccol), false);
-                        break;
-
-                    case UNUSED:
-                        markCellUnused(new BVCell(crow, ccol));
-                        break;
+                    fillCell(new BVCell(crow, ccol), false);
+                }
+                else
+                {
+                    emptyCell(new BVCell(crow, ccol), false);
                 }
             }
         }
     }
 
-    // Empty constructor, used to define an invalid board state.
-    private BVBoardState() {
+    /**
+     * @return id of the state
+     */
+    @Override
+    public long getId() {
+        if (id != null)
+            return id;
+
+        BigInteger idBitSet = BigInteger.valueOf(0);
+
+        for (int row = 0; row < board.getBoardSize(); row++) {
+            for (int col = 0; col < board.getBoardSize(); col++) {
+                BVCell cell = new BVCell(row, col);
+                int cellIndex = board.getIndex(cell);
+                switch (getCellState(cell))
+                {
+                    case EMPTY:
+                        idBitSet.clearBit(cellIndex);
+                        break;
+                    case FILLED:
+                        idBitSet.setBit(cellIndex);
+                }
+            }
+        }
+        id = idBitSet.longValue();
+        return id;
     }
 
     // Apply the given move to the given board state and return the resultant
@@ -186,14 +192,6 @@ public class BVBoardState implements BoardState {
                                                 move.getClass().getName());
         }
        return apply((BVBoardMove) move);
-    }
-
-    /**
-     * Return an invalid board state, used to signal end of processing
-     * @return an invalid state
-     */
-    public BoardState getInvalidState() {
-        return new BVBoardState();
     }
 
     /**
@@ -209,9 +207,9 @@ public class BVBoardState implements BoardState {
         // possible move. A move in a given direction is possible if
         // 1. the cell next to the given cell in the given direction is filled
         // 2. the cell next to the cell in step 1 is empty
-        for (row = 0; row < boardSize; row++)
+        for (row = 0; row < board.getBoardSize(); row++)
         {
-            for (col = 0; col < boardSize; col++)
+            for (col = 0; col < board.getBoardSize(); col++)
             {
                 BVCell curcell = new BVCell(row, col);
 
@@ -233,22 +231,6 @@ public class BVBoardState implements BoardState {
     }
 
     /**
-     * @return id of the state
-     */
-    @Override
-    public long getId() {
-        return id;
-    }
-
-    /**
-     * @param id, set id of the current state to the given id.
-     */
-    @Override
-    public void setId(long id) {
-        this.id = id;
-    }
-
-    /**
      * @return string description of the state.
      */
     @Override
@@ -259,10 +241,10 @@ public class BVBoardState implements BoardState {
         String		sep;
 
         sep = new String("[");
-        for (row = 0; row < boardSize; row++)
+        for (row = 0; row < board.getBoardSize(); row++)
         {
             sep = sep + "[";
-            for (col = 0; col < boardSize; col++)
+            for (col = 0; col < board.getBoardSize(); col++)
             {
                 out = out + sep + getCellState(new BVCell(row, col)).toString();
                 sep = ", ";
@@ -283,7 +265,7 @@ public class BVBoardState implements BoardState {
      */
     @Override
     public BoardState newState(long id, String stateDesc) {
-        return new BVBoardState(id, stateDesc);
+        return new BVBoardState(board, id);
     }
 
     /**
@@ -310,6 +292,7 @@ public class BVBoardState implements BoardState {
         // Mark the cell filled, increment the counter
         boardState[cell.getRow()][cell.getCol()] = CellState.FILLED;
         numFilled++;
+        id = null; // state changed so id needs to be calculate again if required
     }
 
     /**
@@ -336,29 +319,19 @@ public class BVBoardState implements BoardState {
         // Mark the cell empty, increment the counter
         boardState[cell.getRow()][cell.getCol()] = CellState.EMPTY;
         numEmpty++;
-    }
-
-    /**
-     * Mark the given cell as unused. This is called only when the board is being initialized, so the state of cell is
-     * not expected to be initialized.
-     * @param cell
-     */
-    private void markCellUnused(BVCell cell) {
-        if (getCellState(cell) != null)
-            throw new IllegalStateException("Cell " + cell.toString() + " is " + getCellState(cell) + " and is in use.");
-        boardState[cell.getRow()][cell.getCol()] = CellState.UNUSED;
+        id = null; // state changed so id needs to be calculate again if required
     }
 
     // The board can be considered to have unused cells beyond the board size.
     // This allows us to avoid another method isValidCell() and call it
     // everywhere
-    private CellState getCellState(BVCell BVCell)
+    private CellState getCellState(BVCell cell)
     {
-        int			row = BVCell.getRow();
-        int			col = BVCell.getCol();
-        if (row >= 0 && row < boardSize && col >= 0 && col < boardSize)
+        int			row = cell.getRow();
+        int			col = cell.getCol();
+        if (row >= 0 && row < board.getBoardSize() && col >= 0 && col < board.getBoardSize())
             return boardState[row][col];
-        return CellState.UNUSED;
+        throw new IllegalArgumentException("invalid cell " + cell);
     }
 
     boolean isEmptyCell(BVCell BVCell)
@@ -374,7 +347,7 @@ public class BVBoardState implements BoardState {
         // Copy the current state and apply given move.
         BVBoardState result = new BVBoardState(this);
         // The resultant state's id is unknown. Wipe out the input state's id.
-        result.id = 0;
+        result.id = null;
 
         BVCell startCell = move.getStartBVCell();
         BVDirection dir = move.getDirection();
@@ -410,7 +383,7 @@ public class BVBoardState implements BoardState {
      * @return true if other is logically equivalent to this
      */
     private boolean equals(BVBoardState other) {
-        if (boardSize != other.boardSize) {
+        if (board != other.board) {
             return false;
         }
 
@@ -425,6 +398,9 @@ public class BVBoardState implements BoardState {
         if (boardState.length != other.boardState.length) {
             return false;
         }
+
+        if (this.id != null && other.id != null && this.id != other.id)
+            return false;
 
         for (int cnt = 0; cnt < boardState.length; cnt++) {
             if (!Arrays.equals(boardState[cnt], other.boardState[cnt])) {
